@@ -6,4 +6,12 @@ try (Connection conn = PdmDbsManager.getInstance().getDataSource(rdrConfig).getC
 
     // Proceed with validation after record is found
     // ... (rest of your logic)
-}
+
+// required dependency 
+
+<dependency>
+    <groupId>org.awaitility</groupId>
+    <artifactId>awaitility</artifactId>
+    <version>4.2.0</version>
+    <scope>test</scope> <!-- You can remove this if using in non-test code -->
+</dependency>
