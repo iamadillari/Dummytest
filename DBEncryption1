@@ -1,0 +1,35 @@
+public void validateClientEncryption(String clientId, List<String> keyType) throws SQLException {
+    String respClientId = "";
+    String respKeyType = "";
+    try (Connection conn = PdmDbDsManager.getInstance().getDataSource(rdrConfig).getConnection()) {
+        PreparedStatement ps = conn.prepareStatement(SELECT_CLNT_ENCRYPT_DTL_SQL);
+        ps.setString(parameterIndex: 1, clientId);
+        // Wait for record
+        ResultSet resultSet = ps.executeQuery();
+        // Using Awaitility for 1 sec polling at most 30 seconds
+        long startTime = System.currentTimeMillis();
+        long maxWaitTime = 30000; // 30 seconds max wait time
+        long waitInterval = 2000; // Wait 2 seconds between retries
+        while (!resultSet.next()) {
+            // Check if we've exceeded the maximum wait time
+            if (System.currentTimeMillis() - startTime > maxWaitTime) {
+                throw new SQLException("TIMEOUT: Entry not found in database after waiting for " + maxWaitTime + "ms");
+            }
+            // Wait for a short interval before retry
+            Thread.sleep(millis: waitInterval);
+            resultSet = ps.executeQuery(); // Retry the query
+        }
+        // If we reach here, the data is found
+        respClientId = resultSet.getString(columnLabel: "CLNT_ID");
+        AonAssert.assertEquals(respClientId, clientId,
+                message: "Validating Encryption Details for the onboarded clientId in the " +
+                        "Client Encryption Details table");
+        respKeyType = resultSet.getString(columnLabel: "KEY_TYPE");
+        AonAssert.assertTrue(keyType.contains(respKeyType),
+                message: "Validating Key Status in the 'Client Encryption Details'");
+        Logger.info("Expected Encryption key types: {} found for clientId: {} in the 'Client Encryption Details' table",
+                keyType, clientId);
+    } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+    }
+}
